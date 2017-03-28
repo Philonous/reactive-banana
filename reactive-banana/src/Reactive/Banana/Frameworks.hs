@@ -16,7 +16,7 @@ module Reactive.Banana.Frameworks (
 
     -- * Building event networks with input/output
     -- ** Core functions
-    compile, MomentIO,
+    compile, MomentIO, sync,
     module Control.Event.Handler,
     fromAddHandler, fromChanges, fromPoll,
     reactimate, Future, reactimate',
@@ -41,6 +41,7 @@ import           Control.Event.Handler
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.IORef
+import           Control.Concurrent.MVar
 import           Reactive.Banana.Combinators
 import qualified Reactive.Banana.Internal.Combinators as Prim
 import           Reactive.Banana.Types
@@ -303,6 +304,10 @@ liftIOLater = MIO . Prim.liftIOLater
 -- that you can 'actuate', 'pause' and so on.
 compile :: MomentIO () -> IO EventNetwork
 compile = fmap EN . Prim.compile . unMIO
+
+
+sync :: EventNetwork -> MomentIO a -> IO a
+sync en f = Prim.runInNetwork (unEN en) (unMIO f)
 
 {-----------------------------------------------------------------------------
     Running event networks

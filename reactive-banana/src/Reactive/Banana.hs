@@ -15,6 +15,7 @@ module Reactive.Banana (
     -- * Exports
     module Reactive.Banana.Combinators,
     compile,
+    sync,
     ) where
 
 import Reactive.Banana.Combinators

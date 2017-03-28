@@ -128,6 +128,7 @@ instance Eq SomeNode where
     (P x) == (P y) = equalRef x y
     (L x) == (L y) = equalRef x y
     (O x) == (O y) = equalRef x y
+    _     == _     = False
 
 {-# INLINE mkWeakNodeValue #-}
 mkWeakNodeValue :: SomeNode -> v -> IO (Weak v)
@@ -150,6 +151,8 @@ type EvalLW   = Action
 type EvalO    = Future (IO ())
 type Future   = IO
 
+
+-- Evaluate a Pulse
 -- Note: For efficiency reasons, we unroll the monad transformer stack.
 -- type EvalP = RWST () Lazy.Vault EvalPW Build
 type EvalP    = RWSIOT BuildR (EvalPW,BuildW) Lazy.Vault IO

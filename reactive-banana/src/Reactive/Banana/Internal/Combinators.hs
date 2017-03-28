@@ -49,6 +49,7 @@ data EventNetwork = EventNetwork
     { runStep :: Prim.Step -> IO ()
     , actuate :: IO ()
     , pause   :: IO ()
+    , net     :: MVar Prim.Network
     }
 
 -- | Compile to an event network.
@@ -69,13 +70,22 @@ compile setup = do
             { runStep = runStep
             , actuate = writeIORef actuated True
             , pause   = writeIORef actuated False
+            , net     = s
             }
 
     (output, s0) <-                             -- compile initial graph
         Prim.compile (runReaderT setup eventNetwork) Prim.emptyNetwork
     putMVar s s0                                -- set initial state
-        
+
     return $ eventNetwork
+
+runInNetwork :: EventNetwork -> Moment a -> IO a
+runInNetwork en@EventNetwork{ net = s} f = do
+  s1 <- takeMVar s                    -- read and take lock
+  (output, s2) <- Prim.compile (runReaderT f en) s1
+  putMVar s s2                        -- write state
+  return output
+
 
 fromAddHandler :: AddHandler a -> Moment (Event a)
 fromAddHandler addHandler = do
@@ -155,6 +165,9 @@ stepperB a e = cacheAndSchedule $ do
         (l,_) <- Prim.accumL a p1
         return (l,p2)
 
+accumE :: a
+       -> Cached (ReaderT EventNetwork Prim.Build) (Prim.Pulse (a -> a))
+       -> Moment (Cached Moment (Prim.Pulse a))
 accumE a e1 = cacheAndSchedule $ do
     p0 <- runCached e1
     liftBuild $ do
@@ -184,7 +197,7 @@ executeP p1 = do
         p2 <- Prim.mapP runReaderT p1
         Prim.executeP p2 r
 
-observeE :: Event (Moment a) -> Event a 
+observeE :: Event (Moment a) -> Event a
 observeE = liftCached1 $ executeP
 
 executeE :: Event (Moment a) -> Moment (Event a)
